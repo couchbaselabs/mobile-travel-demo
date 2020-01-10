@@ -1,0 +1,18 @@
+#!/bin/sh
+
+exec 2>&1 
+# Create directories where couchbase stores its data
+
+LOGFILE_DIR=/var/log/sync_gateway
+mkdir -p /opt/couchbase-sync-gateway/data
+mkdir -p $LOGFILE_DIR
+
+chown -R couchbase:couchbase /opt/couchbase-sync-gateway/
+
+if [ "$(whoami)" = "couchbase" ]; then
+  sleep 30
+  exec /opt/couchbase-sync-gateway/bin/sync_gateway --defaultLogFilePath="${LOGFILE_DIR}" /etc/sync-gateway/config.json
+else
+  sleep 30
+  exec chpst -ucouchbase /opt/couchbase-sync-gateway/bin/sync_gateway --defaultLogFilePath="${LOGFILE_DIR}" /etc/sync-gateway/config.json
+fi
