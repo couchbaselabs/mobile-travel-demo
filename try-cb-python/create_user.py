@@ -27,9 +27,9 @@ appUrl = "http://localhost:8080/api/user/signup"
 #appValues = json.dumps({"user" : userName, "password" : userPass})
 appValues = json.dumps({"user" : userName, "password" : hashPass})
 appUser = requests.post(appUrl, headers=headerInfo, data=appValues)
-print "Created user" + appUser.text,appUser.status_code
+print "Created webapp user" + appUser.text,appUser.status_code
 
 sgUrl = "http://localhost:4985/travel-sample/_user/"
 sgValues = json.dumps({"name" : userName, "password" : userPass})
 sgUser = requests.post(sgUrl, headers=headerInfo, data=sgValues)
-print "Created user" + str(sgUser.text),str(sgUser.status_code)
+print "Created sync gateway user" + str(sgUser.text),str(sgUser.status_code)
