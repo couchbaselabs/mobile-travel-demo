@@ -14,21 +14,21 @@ MAINTAINER Couchbase Docker Team <docker@couchbase.com>
 #  net-tools: ifconfig, arp, netstat
 #  numactl: numactl
 RUN apt-get update && \
-    apt-get install -yq runit wget chrpath tzdata git\
-    lsof lshw sysstat net-tools numactl python-httplib2 python-pip && \
+    apt-get install -yq apt-utils runit wget chrpath tzdata git\
+    lsof lshw sysstat net-tools numactl python-httplib2 python-pip lsb-core lsb-release && \
     apt-get autoremove && apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ARG CB_VERSION=6.0.3
-ARG CB_RELEASE_URL=https://packages.couchbase.com/releases/6.0.3
-ARG CB_PACKAGE=couchbase-server-enterprise_6.0.3-ubuntu16.04_amd64.deb
-ARG CB_SHA256=bb8fe58b25d721833426ca5eeccc3bec41e793e7d961f1edac7f099f98345be8
-#
-ARG SG_VERSION=2.6.1
-ARG SG_RELEASE_URL=http://packages.couchbase.com/releases/couchbase-sync-gateway/2.6.1
-ARG SG_PACKAGE=couchbase-sync-gateway-enterprise_2.6.1_x86_64.deb
-ARG SG_SHA256=6c6b95e4519cbefbc2ec0a51dc274da3fcf6c29c5202298c9a578f979be969f8
+ARG CB_VERSION=6.5.0
+ARG CB_RELEASE_URL=https://packages.couchbase.com/releases/6.5.0
+ARG CB_PACKAGE=couchbase-server-enterprise_6.5.0-ubuntu16.04_amd64.deb
+ARG CB_SHA256=5505c6bb026090dae7351e9d83caeab00437f19e48e826afd4cb6bafc484cd2b
 
+ARG SG_VERSION=2.7.0
+ARG SG_RELEASE_URL=http://packages.couchbase.com/releases/couchbase-sync-gateway/2.7.0
+ARG SG_PACKAGE=couchbase-sync-gateway-enterprise_2.7.0_x86_64.deb
+ARG SG_SHA256=d30ad3009a3ec0dc43e0ee2d8312b370572bc8219031a104b044bc22d3053d14
+ARG SG_PACKAGE_NAME=couchbase-sync-gateway
 
 ENV PATH=$PATH:/opt/couchbase/bin:/opt/couchbase/bin/tools:/opt/couchbase/bin/install:/opt/couchbase-sync/gateway/:/opt/couchbase-sync-gateway/bin
 
@@ -37,7 +37,7 @@ ENV PATH=$PATH:/opt/couchbase/bin:/opt/couchbase/bin/tools:/opt/couchbase/bin/in
 RUN groupadd -g 1000 couchbase && useradd couchbase -u 1000 -g couchbase -M
 
 
-#todo
+# possible todo
 # Add section for downloading the travel-sample config
 # move travel sample config to the default location
 # create search index
@@ -52,13 +52,13 @@ RUN export INSTALL_DONT_START_SERVER=1 && \
     dpkg -i ./$CB_PACKAGE && rm -f ./$CB_PACKAGE
 
 # Install couchbase-sync-gateway
-#RUN export INSTALL_DONT_START_SYNCGATEWAY=1 && \
-#    wget -N --no-verbose $SG_RELEASE_URL/$SG_PACKAGE && \
-#    echo "$SG_SHA256  $SG_PACKAGE" | sha256sum -c - && \
-#    dpkg -i ./$SG_PACKAGE && rm -f ./$SG_PACKAGE
-
-COPY config/couchbase-sync-gateway-enterprise_2.6.1_x86_64.tar.gz /
-RUN tar xzvf /couchbase-sync-gateway-enterprise_2.6.1_x86_64.tar.gz && \
+RUN export INSTALL_DONT_START_SERVER=1 && \
+    wget -N --no-verbose $SG_RELEASE_URL/$SG_PACKAGE && \
+    echo "$SG_SHA256  $SG_PACKAGE" | sha256sum -c - && \
+    dpkg --unpack ./$SG_PACKAGE &&\ 
+    rm /var/lib/dpkg/info/"$SG_PACKAGE_NAME".postinst -f &&\ 
+    dpkg --configure $SG_PACKAGE_NAME && rm -f ./$SG_PACKAGE &&\
+    apt-get install -yf &&\
     mkdir -p /opt/couchbase-sync-gateway/data && \
     mkdir /etc/sync-gateway && \
     chown -R couchbase:couchbase /opt/couchbase-sync-gateway
@@ -73,6 +73,7 @@ RUN chown -R couchbase:couchbase /etc/service
 
 #create a default configuration for SG
 COPY config/sync-gateway-config-travelsample.json /etc/sync-gateway/config.json
+COPY config/fts-hotels-index.json /tmp/fts-hotels-index.json
 
 # Add dummy script for commands invoked by cbcollect_info that
 # make no sense in a Docker container
@@ -92,6 +93,8 @@ CMD ["couchbase-server"]
 # If user doesn't specify any args, use the default config
 #CMD ["/etc/sync-gateway/config.json"]
 
+# 4984: Couchbase Sync Gateway REST/HTTP/WSS Interface
+# 4985: Couchbase Sync Gateway REST/HTTP Admin interface on /_admin/
 # 8091: Couchbase Web console, REST/HTTP interface
 # 8092: Views, queries, XDCR
 # 8093: Query services (4.0+)
